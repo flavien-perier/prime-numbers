@@ -12,18 +12,18 @@ unsigned char isInteger(double value) {
 	return 0;
 }
 
-long unsigned int *primeNumbers(long unsigned int rank) {
-	long unsigned int *primeList = (long int*)malloc(sizeof(long int) * rank);
+unsigned long int *primeNumbers(unsigned long int rank) {
+	unsigned long int *primeList = (unsigned long int*)malloc(sizeof(long int) * rank);
 
 	*(primeList) = 2;
 	*(primeList + 1) = 3;
 
-	long unsigned int iterator = 2;
+	unsigned long int iterator = 2;
 	unsigned char isPrime;
 
-	for (register long unsigned int i = 5; iterator < rank; i = i + 2) {
+	for (register unsigned long int i = 5; iterator < rank; i = i + 2) {
 		isPrime = 1;
-		for (register long unsigned int j = 2; j < iterator && *(primeList + j) < i / 2; j++) {
+		for (register unsigned long int j = 2; j < iterator && *(primeList + j) < i / 2; j++) {
 			if (isInteger(i * 1.0 / *(primeList + j))) {
 				isPrime = 0;
 				break;
@@ -40,10 +40,10 @@ long unsigned int *primeNumbers(long unsigned int rank) {
 }
 
 int main(int argc, char* argv[]) {
-	long unsigned int rank = 0;
+	unsigned long int rank = 0;
 	unsigned char useJson = 0;
 
-	for (register unsigned int i = 1; i < argc; i++) {
+	for (register unsigned short int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--rank") == 0 || strcmp(argv[i], "-r") == 0) {
 			if (i + 1 < argc) {
 				rank = atoi(argv[i + 1]);
@@ -61,20 +61,19 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	long unsigned int *primeList = primeNumbers(rank);
+	unsigned long int *primeList = primeNumbers(rank);
 
 	if (useJson) {
 		printf("[");
 	}
 
-	for (register unsigned int i = 0; i<rank; i++) {
+	for (register unsigned long int i = 0; i < rank; i++) {
 		if (useJson) {
 			printf("%d", *(primeList + i));
 			if (i + 1 != rank) {
 				printf(",");
 			}
-		}
-		else {
+		} else {
 			printf("%d\n", *(primeList + i));
 		}
 	}
