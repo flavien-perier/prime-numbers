@@ -12,18 +12,18 @@ unsigned char isInteger(double value) {
 	return 0;
 }
 
-unsigned long int *primeNumbers(unsigned long int rank) {
-	unsigned long int *primeList = (unsigned long int*)malloc(sizeof(long int) * rank);
+unsigned long long int *primeNumbers(unsigned int rank) {
+	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long int) * rank);
 
 	*(primeList) = 2;
 	*(primeList + 1) = 3;
 
-	unsigned long int iterator = 2;
+	unsigned int iterator = 2;
 	unsigned char isPrime;
 
-	for (register unsigned long int i = 5; iterator < rank; i = i + 2) {
+	for (register unsigned long long int i = 5; iterator < rank; i = i + 2) {
 		isPrime = 1;
-		for (register unsigned long int j = 2; j < iterator && *(primeList + j) < i / 2; j++) {
+		for (register unsigned long long int j = 2; j < iterator && *(primeList + j) < i / 2; j++) {
 			if (isInteger(i * 1.0 / *(primeList + j))) {
 				isPrime = 0;
 				break;
@@ -40,7 +40,7 @@ unsigned long int *primeNumbers(unsigned long int rank) {
 }
 
 int main(int argc, char* argv[]) {
-	unsigned long int rank = 0;
+	unsigned int rank = 0;
 	unsigned char useJson = 0;
 
 	for (register unsigned short int i = 1; i < argc; i++) {
@@ -61,13 +61,13 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	unsigned long int *primeList = primeNumbers(rank);
+	unsigned long long int *primeList = primeNumbers(rank);
 
 	if (useJson) {
 		printf("[");
 	}
 
-	for (register unsigned long int i = 0; i < rank; i++) {
+	for (register unsigned long long int i = 0; i < rank; i++) {
 		if (useJson) {
 			printf("%d", *(primeList + i));
 			if (i + 1 != rank) {
