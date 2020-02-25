@@ -1,12 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 
 #define HELP_MESSAGE "Params :\n\t-r (number)\t--rank (number)\t\tGet the rank of the suite.\n\t-js\t\t--json\t\t\tUse json format.\n"
 
-unsigned char isInteger(double value) {
-	if (round(value) == value) {
+unsigned char isInteger(long double value) {
+	if ((unsigned long long int)(value + 0.5) == value) {
 		return 1;
 	}
 	return 0;
