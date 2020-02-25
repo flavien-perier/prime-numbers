@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 
-#define HELP_MESSAGE "Params :\n\t-r (number)\t-rank (number)\t\tIndicate the rank of the suite.\n\t-js\t\t--json\t\t\tUse json format.\n"
+#define HELP_MESSAGE "Params :\n\t-r (number)\t--rank (number)\t\tGet the rank of the suite.\n\t-js\t\t--json\t\t\tUse json format.\n"
 
 unsigned char isInteger(double value) {
 	if (round(value) == value) {

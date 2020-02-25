@@ -1,14 +1,16 @@
 # Premiers
 
-Simple program for write the prime number suite.
+Simple program to calculate the sequence of prime numbers.
 
 ## Compile
 
 with gcc:
+
 ```sh
 gcc primeNumbers.c -lm -o primeNumbers
 ```
 
-## Params :
-- -r (number)     -rank (number)          Indicate the rank of the suite.
+## Params
+
+- -r (number)     --rank (number)         Get the rank of the suite.
 - -js             --json                  Use json format.
