@@ -13,7 +13,7 @@ unsigned char isInteger(double value) {
 }
 
 unsigned long long int *primeNumbers(unsigned int rank) {
-	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long int) * rank);
+	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long long int) * rank);
 
 	*(primeList) = 2;
 	*(primeList + 1) = 3;
