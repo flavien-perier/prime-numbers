@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 #include <string.h>
 
 #define HELP_MESSAGE "Params :\n\t-r (number)\t--rank (number)\t\tGet the rank of the suite.\n\t-js\t\t--json\t\t\tUse json format.\n"
@@ -22,7 +23,7 @@ unsigned long long int *primeNumbers(unsigned int rank) {
 
 	for (register unsigned long long int i = 5; iterator < rank; i = i + 2) {
 		isPrime = 1;
-		for (register unsigned long long int j = 2; j < iterator && *(primeList + j) < i / 2; j++) {
+		for (register unsigned long long int j = 1; j < iterator && *(primeList + j) < (i >> 1); j++) {
 			if (isInteger(i * 1.0 / *(primeList + j))) {
 				isPrime = 0;
 				break;
