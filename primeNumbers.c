@@ -1,9 +1,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <string.h>
 
 #define HELP_MESSAGE "Params :\n\t-r (number)\t--rank (number)\t\tGet the rank of the suite.\n\t-js\t\t--json\t\t\tUse json format.\n"
+
+typedef struct {
+	unsigned int id;
+
+	unsigned int rank;
+	unsigned long long int *primeList;
+
+	pthread_t thread;
+	sem_t sem;
+} Task;
 
 unsigned char isInteger(long double value) {
 	if ((unsigned long long int)(value + 0.5) == value) {
@@ -12,31 +23,48 @@ unsigned char isInteger(long double value) {
 	return 0;
 }
 
-unsigned long long int *primeNumbers(unsigned int rank) {
-	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long long int) * rank);
-
-	*(primeList) = 2;
-	*(primeList + 1) = 3;
+void *primeNumbersWorker(void *args) {
+	Task *task = (Task*)args;
 
 	unsigned int iterator = 2;
 	unsigned char isPrime;
 
-	for (register unsigned long long int i = 5; iterator < rank; i = i + 2) {
+	for (register unsigned long long int i = 5; iterator < task->rank; i = i + 2) {
 		isPrime = 1;
-		for (register unsigned long long int j = 1; j < iterator && *(primeList + j) < (i >> 1); j++) {
-			if (isInteger(i * 1.0 / *(primeList + j))) {
+		for (register unsigned long long int j = 1; j < iterator && *(task->primeList + j) < (i >> 1); j++) {
+			if (isInteger(i * 1.0 / *(task->primeList + j))) {
 				isPrime = 0;
 				break;
 			}
 		}
 
 		if (isPrime) {
-			*(primeList + iterator) = i;
+			*(task->primeList + iterator) = i;
 			iterator++;
 		}
 	}
 
-	return primeList;
+	sem_post(&task->sem);
+	pthread_exit(NULL);
+}
+
+unsigned long long int *primeNumbers(unsigned int rank, unsigned int threads) {
+	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long long int) * rank);
+	*(primeList) = 2;
+	*(primeList + 1) = 3;
+
+	Task *task=(Task*)malloc(sizeof(Task));
+	task->id = 0;
+	task->primeList = primeList;
+	task->rank = rank;
+
+	sem_init(&task->sem, 0, 0);
+	pthread_create(&task->thread, NULL, primeNumbersWorker, task);
+
+	sem_wait(&task->sem);
+	sem_destroy(&task->sem);
+
+	return task->primeList;
 }
 
 int main(int argc, char* argv[]) {
@@ -61,7 +89,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	unsigned long long int *primeList = primeNumbers(rank);
+	unsigned long long int *primeList = primeNumbers(rank, 1);
 
 	if (useJson) {
 		printf("[");
