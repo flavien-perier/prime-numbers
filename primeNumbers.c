@@ -53,18 +53,35 @@ unsigned long long int *primeNumbers(unsigned int rank, unsigned int threads) {
 	*(primeList) = 2;
 	*(primeList + 1) = 3;
 
-	Task *task=(Task*)malloc(sizeof(Task));
-	task->id = 0;
-	task->primeList = primeList;
-	task->rank = rank;
+	Task **tasks = (Task**)malloc(sizeof(Task) * threads);
 
-	sem_init(&task->sem, 0, 0);
-	pthread_create(&task->thread, NULL, primeNumbersWorker, task);
+	// Initializes all tasks
+	for (unsigned int i = 0; i < threads; i++) {
+		tasks[i] = (Task*)malloc(sizeof(Task));
+		tasks[i]->id = 0;
+		tasks[i]->primeList = primeList;
+		tasks[i]->rank = rank;
 
-	sem_wait(&task->sem);
-	sem_destroy(&task->sem);
+		sem_init(&tasks[i]->sem, 0, 0);
+	}
 
-	return task->primeList;
+	// Launches threads
+	for (unsigned int i = 0; i < threads; i++) {
+		pthread_create(&tasks[i]->thread, NULL, primeNumbersWorker, tasks[i]);
+	}
+
+	// Awaits all tasks
+	for (unsigned int i = 0; i < threads; i++) {
+		sem_wait(&tasks[i]->sem);
+	}
+
+	// Removes all semaphores
+	for (unsigned int i = 0; i < threads; i++) {
+		sem_destroy(&tasks[i]->sem);
+		free(tasks[i]);
+	}
+
+	return primeList;
 }
 
 int main(int argc, char* argv[]) {
