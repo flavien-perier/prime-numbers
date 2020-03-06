@@ -41,7 +41,7 @@ void *primeNumbersWorker(void *args) {
 
 	for (register unsigned long long int i = *task->initValue; progression < *task->rank; i = i + (2 * *task->nbrThreads)) {
 		isPrime = 1;
-		for (register unsigned long long int j = 1; j < progression && task->primeList[j] < i >> 1; j++) {
+		for (register unsigned int j = 1; j < progression && task->primeList[j] < i >> 1; j++) {
 			if (isInteger(i * 1.0 / task->primeList[j])) {
 				isPrime = 0;
 				break;
@@ -117,6 +117,35 @@ unsigned long long int *primeNumbers(unsigned int rank, unsigned int nbrMaxThrea
 	return primeList;
 }
 
+void sort(unsigned long long int *primeList, unsigned int length) {
+	unsigned long long int min;
+	unsigned long long int max;
+	unsigned int minIndex;
+	unsigned int maxIndex;
+
+	for (register unsigned int i = 0; i < length / 2; i++) {
+		min = __INT64_MAX__;
+		max = 0;
+
+		for (register unsigned int j = i; j < length - i; j++) {
+			if (primeList[j] <= min) {
+				min = primeList[j];
+				minIndex = j;
+			}
+
+			if (primeList[j] >= max) {
+				max = primeList[j];
+				maxIndex = j;
+			}
+		}
+
+		primeList[minIndex] = primeList[i];
+		primeList[i] = min;
+		primeList[maxIndex] = primeList[length - i - 1];
+		primeList[length - i - 1] = max;
+	}
+}
+
 int main(int argc, char* argv[]) {
 	unsigned int rank = 0;
 	unsigned int nbrThreads = 1;
@@ -148,6 +177,10 @@ int main(int argc, char* argv[]) {
 	}
 
 	unsigned long long int *primeList = primeNumbers(rank, nbrThreads);
+
+	if (nbrThreads > 1) {
+		sort(primeList, rank);
+	}
 
 	if (useJson) {
 		printf("[");
