@@ -10,22 +10,22 @@
 
 typedef struct {
 	// Worker context
-	unsigned int id;
 	pthread_t thread;
-	sem_t workCompletedSem;
+
 	unsigned long long int primeNumberBuffer;
 	unsigned char primeNumberBuffered;
 	sem_t primeNumberBufferedSem;
+	
 	unsigned char workCompleted;
+	sem_t workCompletedSem;
 
 	// Global context
+	unsigned long long int *primeList;
+
 	unsigned int *rank;
 	unsigned int *progression;
 	unsigned int *nbrThreads;
-	unsigned int *nbrMaxThreads;
 	unsigned long long int *initValue;
-
-	unsigned long long int *primeList;
 
 	sem_t *workerOrchestrator;
 } Task;
@@ -57,12 +57,6 @@ void *primeNumbersWorker(void *args) {
 			task->primeNumberBuffer = i;
 			task->primeNumberBuffered = 1;
 			sem_wait(&task->primeNumberBufferedSem);
-
-			if (task->id == 0 && *task->nbrThreads < *task->nbrMaxThreads && *task->progression % OPERATIONS_BEFORE_NEW_THREAD == 0) {
-				*task->nbrThreads += 1;
-				*task->initValue = i + 2;
-				sem_post(task->workerOrchestrator);
-			}
 		}
 	}
 
@@ -72,12 +66,12 @@ void *primeNumbersWorker(void *args) {
 }
 
 unsigned long long int *primeNumbers(unsigned int rank, unsigned int nbrMaxThreads) {
-	unsigned int i;
+	register unsigned int i;
 
 	unsigned int nbrThreads = 1;
+	unsigned int progression = 2;
 	unsigned long long int initValue = 5;
 
-	unsigned int progression = 2;
 	pthread_mutex_t progressionMutex = PTHREAD_MUTEX_INITIALIZER;
 
 	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long long int) * rank);
@@ -93,21 +87,17 @@ unsigned long long int *primeNumbers(unsigned int rank, unsigned int nbrMaxThrea
 	for (i = 0; i < nbrMaxThreads; i++) {
 		tasks[i] = (Task*)malloc(sizeof(Task));
 
-		tasks[i]->id = i;
-		sem_init(&tasks[i]->workCompletedSem, 0, 0);
-		sem_init(&tasks[i]->primeNumberBufferedSem, 0, 0);
 		tasks[i]->primeNumberBuffered = 0;
+		sem_init(&tasks[i]->primeNumberBufferedSem, 0, 0);
 
 		tasks[i]->workCompleted = 0;
-
-		tasks[i]->rank = &rank;
-		tasks[i]->nbrThreads = &nbrThreads;
-		tasks[i]->nbrMaxThreads = &nbrMaxThreads;
-
-		tasks[i]->progression = &progression;
+		sem_init(&tasks[i]->workCompletedSem, 0, 0);
 
 		tasks[i]->primeList = primeList;
 
+		tasks[i]->rank = &rank;
+		tasks[i]->progression = &progression;
+		tasks[i]->nbrThreads = &nbrThreads;
 		tasks[i]->initValue = &initValue;
 
 		tasks[i]->workerOrchestrator = &workerOrchestrator;
@@ -121,6 +111,7 @@ unsigned long long int *primeNumbers(unsigned int rank, unsigned int nbrMaxThrea
 	// Wait threads
 	unsigned char allTasksBuffered;
 	unsigned char alltasksCompleted = 0;
+	unsigned int oldNbrThreads;
 	while(!alltasksCompleted) {
 		// Test if all tasks as buffered
 		allTasksBuffered = 1;
@@ -135,11 +126,26 @@ unsigned long long int *primeNumbers(unsigned int rank, unsigned int nbrMaxThrea
 		}
 
 		if (allTasksBuffered) {
-			for (i = 0; i < nbrThreads; i++) {
-				primeList[progression++] = tasks[i]->primeNumberBuffer;
+			oldNbrThreads = nbrThreads;
+			unsigned long long int *primeListBuffer = (unsigned long long int*)(malloc(sizeof(long long int) * oldNbrThreads));
+
+			for (i = 0; i < oldNbrThreads; i++) {
+				primeListBuffer[i] = tasks[i]->primeNumberBuffer;
+			}
+			for (i = 0; i < oldNbrThreads; i++) {
+				primeList[progression++] = primeListBuffer[i];
 				tasks[i]->primeNumberBuffered = 0;
+				if (oldNbrThreads < nbrMaxThreads && progression % OPERATIONS_BEFORE_NEW_THREAD == 0) {
+					nbrThreads++;
+					initValue = tasks[i]->primeNumberBuffer + 2;
+					sem_post(&workerOrchestrator);
+				}
+			}
+			for (i = 0; i < oldNbrThreads; i++) {
 				sem_post(&tasks[i]->primeNumberBufferedSem);
 			}
+
+			free(primeListBuffer);
 		}
 	}
 
