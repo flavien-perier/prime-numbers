@@ -112,6 +112,8 @@ unsigned long long int *primeNumbers(unsigned int rank, unsigned int nbrMaxThrea
 	unsigned char allTasksBuffered;
 	unsigned char alltasksCompleted = 0;
 	unsigned int oldNbrThreads;
+	unsigned int primeListIterator = 1;
+	unsigned int tmpListElement;
 	while(!alltasksCompleted) {
 		// Test if all tasks as buffered
 		allTasksBuffered = 1;
@@ -146,6 +148,16 @@ unsigned long long int *primeNumbers(unsigned int rank, unsigned int nbrMaxThrea
 			}
 
 			free(primeListBuffer);
+		} else {
+			if (primeList[primeListIterator - 1] > primeList[primeListIterator]) {
+				tmpListElement = primeList[primeListIterator];
+				primeList[primeListIterator] = primeList[primeListIterator - 1];
+				primeList[primeListIterator - 1] = tmpListElement;
+			}
+
+			if (primeListIterator++ >= progression - 1) {
+				primeListIterator = 1;
+			}
 		}
 	}
 
