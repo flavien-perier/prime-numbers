@@ -12,6 +12,6 @@ gcc primeNumbers.c -lm -o primeNumbers
 
 ## Params
 
-- -r (number)     --rank (number)         Get the rank of the suite.
+- -r (number)     --rank (number)         Get the max rank of the suite.
 - -t (number)     --threads (number)      Configures the number of threads.
 - -js             --json                  Use json format.
