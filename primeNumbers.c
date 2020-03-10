@@ -70,7 +70,7 @@ void *primeNumbersWorker(void *args) {
 	pthread_exit(NULL);
 }
 
-unsigned long long int *primeNumbers(unsigned int maxRank, unsigned long long int maxValue, unsigned int nbrMaxThreads) {
+unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long int *maxValue, unsigned int nbrMaxThreads) {
 	register unsigned int i;
 
 	unsigned int nbrThreads = 1;
@@ -80,7 +80,7 @@ unsigned long long int *primeNumbers(unsigned int maxRank, unsigned long long in
 
 	pthread_mutex_t progressionMutex = PTHREAD_MUTEX_INITIALIZER;
 
-	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long long int) * maxRank);
+	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long long int) * *maxRank);
 	primeList[0] = 2;
 	primeList[1] = 3;
 
@@ -99,8 +99,8 @@ unsigned long long int *primeNumbers(unsigned int maxRank, unsigned long long in
 
 		tasks[i]->primeList = primeList;
 
-		tasks[i]->maxRank = &maxRank;
-		tasks[i]->maxValue = &maxValue;
+		tasks[i]->maxRank = maxRank;
+		tasks[i]->maxValue = maxValue;
 		tasks[i]->progression = &progression;
 		tasks[i]->nbrThreads = &nbrThreads;
 		tasks[i]->initValue = &initValue;
@@ -114,17 +114,21 @@ unsigned long long int *primeNumbers(unsigned int maxRank, unsigned long long in
 		pthread_create(&tasks[i]->thread, NULL, primeNumbersWorker, tasks[i]);
 	}
 
-	// Wait threads
 	unsigned int oldNbrThreads;
 	unsigned int primeListIterator = 1;
-	unsigned int tmpListElement;
+	unsigned int tmpElement;
+	unsigned char allTasksCompleted;
 	while(workInProgress) {
 		oldNbrThreads = nbrThreads;
 
-		// Test if task as buffered
+		allTasksCompleted = 1;
 		for (i = 0; i < oldNbrThreads; i++) {
+			if (!tasks[i]->workCompleted) {
+				allTasksCompleted = 0;
+			}
+
 			if (tasks[i]->primeNumberBuffered) {
-				if (progression >= maxRank) {
+				if (progression >= *maxRank) {
 					workInProgress = 0;
 					break;
 				}
@@ -140,11 +144,16 @@ unsigned long long int *primeNumbers(unsigned int maxRank, unsigned long long in
 			}
 		}
 
+		if (allTasksCompleted) {
+			workInProgress = 0;
+			*maxRank = progression;
+		}
+
 		// Bubble sort
 		if (primeList[primeListIterator - 1] > primeList[primeListIterator]) {
-			tmpListElement = primeList[primeListIterator];
+			tmpElement = primeList[primeListIterator];
 			primeList[primeListIterator] = primeList[primeListIterator - 1];
-			primeList[primeListIterator - 1] = tmpListElement;
+			primeList[primeListIterator - 1] = tmpElement;
 		}
 		if (primeListIterator++ >= progression - 1) {
 			primeListIterator = 1;
@@ -160,6 +169,35 @@ unsigned long long int *primeNumbers(unsigned int maxRank, unsigned long long in
 	free(tasks);
 
 	return primeList;
+}
+
+void sort(unsigned long long int *primeList, unsigned int length) {
+	unsigned long long int min;
+	unsigned long long int max;
+	unsigned int minIndex;
+	unsigned int maxIndex;
+
+	for (register unsigned int i = 0; i < length / 2; i++) {
+		min = __INT64_MAX__;
+		max = 0;
+
+		for (register unsigned int j = i; j < length - i; j++) {
+			if (primeList[j] <= min) {
+				min = primeList[j];
+				minIndex = j;
+			}
+
+			if (primeList[j] >= max) {
+				max = primeList[j];
+				maxIndex = j;
+			}
+		}
+
+		primeList[minIndex] = primeList[i];
+		primeList[i] = min;
+		primeList[maxIndex] = primeList[length - i - 1];
+		primeList[length - i - 1] = max;
+	}
 }
 
 int main(int argc, char* argv[]) {
@@ -203,7 +241,11 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	unsigned long long int *primeList = primeNumbers(maxRank, maxValue, nbrMaxThreads);
+	unsigned long long int *primeList = primeNumbers(&maxRank, &maxValue, nbrMaxThreads);
+
+	if (nbrMaxThreads > 1) {
+		sort(primeList, maxRank);
+	}
 
 	if (useJson) {
 		printf("[");
