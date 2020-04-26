@@ -11,8 +11,6 @@
 \t-js\t\t--json\t\t\tUse json format.\n\
 \t-h\t\t--help\t\t\tShow this message.\n"
 
-#define OPERATIONS_BEFORE_NEW_THREAD 50
-
 typedef struct {
 	// Worker context
 	pthread_t thread;
@@ -66,10 +64,9 @@ void *primeNumbersWorker(void *args) {
 	pthread_exit(NULL);
 }
 
-unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long int *maxValue, unsigned int nbrMaxThreads) {
+unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long int *maxValue, unsigned int nbrThreads) {
 	register unsigned int i;
 
-	unsigned int nbrThreads = 1;
 	unsigned int progression = 2;
 	unsigned char workInProgress = 1;
 
@@ -79,10 +76,10 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 	primeList[0] = 2;
 	primeList[1] = 3;
 
-	Task **tasks = (Task**)malloc(sizeof(Task) * nbrMaxThreads);
+	Task **tasks = (Task**)malloc(sizeof(Task) * nbrThreads);
 
 	// Initializes all tasks
-	for (i = 0; i < nbrMaxThreads; i++) {
+	for (i = 0; i < nbrThreads; i++) {
 		tasks[i] = (Task*)malloc(sizeof(Task));
 
 		sem_init(&tasks[i]->primeNumberBufferedSem, 0, 0);
@@ -99,28 +96,23 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 		tasks[i]->workInProgress = &workInProgress;
 	}
 
-	tasks[0]->initValue = 5;
-	pthread_create(&tasks[0]->thread, NULL, primeNumbersWorker, tasks[0]);
+	for (i = 0; i < nbrThreads; i++) {
+		tasks[i]->initValue = 5 + 2*i;
+		pthread_create(&tasks[i]->thread, NULL, primeNumbersWorker, tasks[i]);
+	}
 
-	unsigned int oldNbrThreads;
 	unsigned int primeListIterator = 1;
-	unsigned int tmpElement;
+	unsigned long long int tmpElement;
 	unsigned char allTasksCompleted;
-	unsigned char allTasksBuffered;
 
 	while(workInProgress) {
-		oldNbrThreads = nbrThreads;
-
 		allTasksCompleted = 1;
-		allTasksBuffered = 1;
-		for (i = 0; i < oldNbrThreads; i++) {
+		for (i = 0; i < nbrThreads; i++) {
 			if (!tasks[i]->workCompleted) {
 				allTasksCompleted = 0;
 			}
 
-			if (!tasks[i]->primeNumberBuffered) {
-				allTasksBuffered = 0;
-			} else {
+			if (tasks[i]->primeNumberBuffered) {
 				if (progression >= *maxRank) {
 					workInProgress = 0;
 					break;
@@ -128,16 +120,9 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 				primeList[progression++] = tasks[i]->primeNumberBuffer;
 				tasks[i]->primeNumberBuffered = 0;
 				sem_post(&tasks[i]->primeNumberBufferedSem);
-				
-				if (progression % OPERATIONS_BEFORE_NEW_THREAD == 0 && nbrThreads < nbrMaxThreads) {
-					tasks[nbrThreads]->initValue = tasks[i]->primeNumberBuffer + 2;
-					
-					pthread_create(&tasks[nbrThreads]->thread, NULL, primeNumbersWorker, tasks[nbrThreads]);
-					nbrThreads++;
-				}
 			}
 		}
-
+		
 		if (allTasksCompleted) {
 			workInProgress = 0;
 			*maxRank = progression;
@@ -152,12 +137,12 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 		}
 
 		if (primeListIterator++ >= progression - 1) {
-			primeListIterator = 1;
+			primeListIterator = progression / 2;
 		}
 	}
 
 	// Free memory
-	for (i = 0; i < nbrMaxThreads; i++) {
+	for (i = 0; i < nbrThreads; i++) {
 		sem_destroy(&tasks[i]->primeNumberBufferedSem);
 		free(tasks[i]);
 	}
@@ -198,7 +183,7 @@ void sort(unsigned long long int *primeList, unsigned int length) {
 int main(int argc, char* argv[]) {
 	unsigned int maxRank = 0;
 	unsigned long long int maxValue = __INT64_MAX__;
-	unsigned int nbrMaxThreads = 1;
+	unsigned int nbrThreads = 1;
 	unsigned char useJson = 0;
 
 	for (register unsigned short int i = 1; i < argc; i++) {
@@ -218,7 +203,7 @@ int main(int argc, char* argv[]) {
 			}
 		} else if (strcmp(argv[i], "--threads") == 0 || strcmp(argv[i], "-t") == 0) {
 			if (i + 1 < argc) {
-				nbrMaxThreads = atoi(argv[i + 1]);
+				nbrThreads = atoi(argv[i + 1]);
 			} else {
 				printf(HELP_MESSAGE);
 				return -1;
@@ -236,9 +221,9 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	unsigned long long int *primeList = primeNumbers(&maxRank, &maxValue, nbrMaxThreads);
+	unsigned long long int *primeList = primeNumbers(&maxRank, &maxValue, nbrThreads);
 
-	if (nbrMaxThreads > 1) {
+	if (nbrThreads > 1) {
 		sort(primeList, maxRank);
 	}
 
