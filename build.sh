@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm primeNumbers
+rm primeNumbers 2>/dev/null
 
 gcc primeNumbers.c -lpthread -lm -o primeNumbers
 if [ $? -eq 0 ]

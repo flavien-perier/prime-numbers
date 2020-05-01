@@ -17,7 +17,6 @@ typedef struct {
 	sem_t primeNumberBufferedSem;
 
 	unsigned int id;
-	unsigned long long int initValue;
 	unsigned long long int maxValue;
 	unsigned long long int primeNumberBuffer;
 	unsigned char primeNumberBuffered;
@@ -25,6 +24,7 @@ typedef struct {
 
 	// Global context
 	unsigned long long int *primeList;
+	pthread_mutex_t *primeListMutex;
 
 	unsigned int *progression;
 	unsigned int *nbrThreads;
@@ -44,13 +44,19 @@ void *primeNumbersWorker(void *args) {
 	unsigned char isPrime;
 	register unsigned int i;
 
-	for (register unsigned long long int value = task->initValue; value <= task->maxValue && *task->workInProgress; value += (2 * *task->nbrThreads)) {
+	for (register unsigned long long int value = 5 + 2 * task->id; value <= task->maxValue && *task->workInProgress; value += (2 * *task->nbrThreads)) {
 		isPrime = 1;
-		for (i = 1; i < *task->progression && task->primeList[i] < value >> 1; i++) {
+		for (i = 1; i < *task->progression; i++) {
+			pthread_mutex_lock(&task->primeListMutex[i]);
 			if (isInteger(value * 1.0 / task->primeList[i])) {
 				isPrime = 0;
+				pthread_mutex_unlock(&task->primeListMutex[i]);
+				break;
+			} else if (task->primeList[i] > value >> 1) {
+				pthread_mutex_unlock(&task->primeListMutex[i]);
 				break;
 			}
+			pthread_mutex_unlock(&task->primeListMutex[i]);
 		}
 
 		if (isPrime) {
@@ -70,7 +76,10 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 	unsigned int progression = 2;
 	unsigned char workInProgress = 1;
 
-	pthread_mutex_t progressionMutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutex_t *primeListMutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t) * *maxRank);
+	for (i = 0; i < *maxRank; i++) {
+		pthread_mutex_init(&primeListMutex[i], NULL);
+	}
 
 	unsigned long long int *primeList = (unsigned long long int*)malloc(sizeof(long long int) * *maxRank);
 	primeList[0] = 2;
@@ -90,6 +99,7 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 		tasks[i]->workCompleted = 0;
 
 		tasks[i]->primeList = primeList;
+		tasks[i]->primeListMutex = primeListMutex;
 
 		tasks[i]->progression = &progression;
 		tasks[i]->nbrThreads = &nbrThreads;
@@ -97,7 +107,6 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 	}
 
 	for (i = 0; i < nbrThreads; i++) {
-		tasks[i]->initValue = 5 + 2*i;
 		pthread_create(&tasks[i]->thread, NULL, primeNumbersWorker, tasks[i]);
 	}
 
@@ -117,7 +126,11 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 					workInProgress = 0;
 					break;
 				}
-				primeList[progression++] = tasks[i]->primeNumberBuffer;
+
+				pthread_mutex_lock(&primeListMutex[progression]);
+				primeList[progression] = tasks[i]->primeNumberBuffer;
+				pthread_mutex_unlock(&primeListMutex[progression++]);
+				
 				tasks[i]->primeNumberBuffered = 0;
 				sem_post(&tasks[i]->primeNumberBufferedSem);
 			}
@@ -130,11 +143,15 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 		}
 
 		// Bubble sort
+		pthread_mutex_lock(&primeListMutex[primeListIterator - 1]);
+		pthread_mutex_lock(&primeListMutex[primeListIterator]);
 		if (primeList[primeListIterator - 1] > primeList[primeListIterator]) {
 			tmpElement = primeList[primeListIterator];
 			primeList[primeListIterator] = primeList[primeListIterator - 1];
 			primeList[primeListIterator - 1] = tmpElement;
 		}
+		pthread_mutex_unlock(&primeListMutex[primeListIterator - 1]);
+		pthread_mutex_unlock(&primeListMutex[primeListIterator]);
 
 		if (primeListIterator++ >= progression - 1) {
 			primeListIterator = progression / 2;
@@ -147,6 +164,11 @@ unsigned long long int *primeNumbers(unsigned int *maxRank, unsigned long long i
 		free(tasks[i]);
 	}
 	free(tasks);
+
+	for (i = 0; i < *maxRank; i++) {
+		pthread_mutex_destroy(&primeListMutex[i]);
+	}
+	free(primeListMutex);
 
 	return primeList;
 }
