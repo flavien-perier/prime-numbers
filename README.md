@@ -4,10 +4,10 @@ Simple program to calculate the sequence of prime numbers.
 
 ## Compile
 
-with gcc:
+with make and gcc:
 
 ```sh
-gcc primeNumbers.c -lm -o primeNumbers
+make
 ```
 
 ## Params
