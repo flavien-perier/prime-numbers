@@ -1,4 +1,6 @@
-# Premiers
+![license](https://badgen.net/github/license/flavien-perier/prime-numbers)
+
+# Prime Numbers
 
 Simple program to calculate the sequence of prime numbers.
 
