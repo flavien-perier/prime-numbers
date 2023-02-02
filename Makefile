@@ -1,22 +1,22 @@
 CC=gcc
 CFLAGS=
-LDFLAGS=-lpthread -lm
+LDFLAGS=-lpthread -lm -lgmp
 EXEC=primeNumbers clean test
-SRC=$(wildcard *.c)
+SRC=$(shell find ./src -type f -name *.c)
 OBJ=$(SRC:.c=.o)
 
 all: $(EXEC)
 
 primeNumbers: $(OBJ)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) $(LDFLAGS) -o $@ $^
 
 %.o: %.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 .PHONY: clean test
 
 clean:
-	rm -rf *.o
+	rm -rf ./src/*.o
 
 test:
-	./test.sh
+	./test/test.sh

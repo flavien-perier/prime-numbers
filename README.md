@@ -4,6 +4,16 @@
 
 Simple program to calculate the sequence of prime numbers.
 
+## Dependencies
+
+- [GMPlib](https://gmplib.org/)
+
+Arch:
+
+```bash
+pacman -S gmp
+```
+
 ## Compile
 
 with make and gcc:
@@ -15,5 +25,4 @@ make
 ## Params
 
 - -r (number)     --rank (number)         Get the max rank of the suite.
-- -t (number)     --threads (number)      Configures the number of threads.
 - -js             --json                  Use json format.
