@@ -20,6 +20,7 @@ then
 else
     echo "Test (r=100) FAILED"
     echo $RESULT
+    echo $EXPECTED_RESULT_100
     exit -1
 fi
 
@@ -40,5 +41,6 @@ then
 else
     echo "Test (r=1000) FAILED"
     echo $RESULT
+    echo $EXPECTED_RESULT_1000
     exit -1
 fi
