@@ -107,9 +107,13 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
 
             if (workers[threadIterator]->isPrime) {
                 if (rank == 0 && iterator % 1000 == 0) {
-                    primeList = realloc(primeList, sizeof(mpz_t) * (iterator + 1000));
                     for (threadIterator2 = 0; threadIterator2 < nbrThreads; threadIterator2++) {
                         pthread_mutex_lock(&workers[threadIterator2]->primeListMutex);
+                    }
+
+                    primeList = realloc(primeList, sizeof(mpz_t) * (iterator + 1000));
+
+                    for (threadIterator2 = 0; threadIterator2 < nbrThreads; threadIterator2++) {
                         workers[threadIterator2]->primeList = primeList;
                         pthread_mutex_unlock(&workers[threadIterator2]->primeListMutex);
                     }
