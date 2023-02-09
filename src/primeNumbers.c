@@ -33,13 +33,23 @@ void* primeTesterWorker(void *args) {
     mpz_t modulo;
     mpz_init(modulo);
 
+    mpz_t sqrtTestedNumber;
+    mpz_init(sqrtTestedNumber);
+
     while (worker->work) {
         sem_wait(&worker->workSem);
         worker->isPrime = 1;
 
+        mpz_sqrt(sqrtTestedNumber, worker->testedNumber);
+
         for (explorerIterator = 1; explorerIterator <= worker->iterator / 2; explorerIterator++) {
             pthread_mutex_lock(&worker->primeListMutex);
             mpz_mod(modulo, worker->testedNumber, worker->primeList[explorerIterator]);
+
+            if (mpz_cmp(worker->primeList[explorerIterator], sqrtTestedNumber) > 0) {
+                pthread_mutex_unlock(&worker->primeListMutex);
+                break;
+            }
             pthread_mutex_unlock(&worker->primeListMutex);
 
             if (mpz_cmp_ui(modulo, 0) == 0) {
