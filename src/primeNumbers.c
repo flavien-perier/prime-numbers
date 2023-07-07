@@ -1,12 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <gmp.h>
-#include <sys/sysinfo.h>
-#include <pthread.h>
-#include <semaphore.h>
-
-#define HELP_MESSAGE "Params :\n\t-r (number)\t--rank (number)\t\tGet the rank of the suite (> 2).\n\t-js\t\t--json\t\t\tUse json format.\n"
+#include "primeNumbers.h"
 
 typedef struct {
     // Thread
@@ -94,10 +86,10 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
     mpz_init(modulo);
 
     if (print) {
-        mpz_out_str(stdout, 10, primeList[0]);
-        printf(useJson ? "," : "\n");
-        mpz_out_str(stdout, 10, primeList[1]);
-        printf(useJson ? "," : "\n");
+        write(mpz_get_str(NULL, 10, primeList[0]));
+        write(useJson ? "," : "\n");
+        write(mpz_get_str(NULL, 10, primeList[1]));
+        write(useJson ? "," : "\n");
     }
 
     register unsigned long long int iterator = 2;
@@ -132,9 +124,9 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
                 mpz_init_set(primeList[iterator], workers[threadIterator]->testedNumber);
 
                 if (print) {
-                    mpz_out_str(stdout, 10, primeList[iterator]);
+                    write(mpz_get_str(NULL, 10, primeList[iterator]));
                     if (iterator + 1 != rank || rank == 0) {
-                        printf(useJson ? "," : "\n");
+                        write(useJson ? "," : "\n");
                     } else {
                         processFinish = 1;
                         break;
@@ -162,42 +154,4 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
     free(workers);
 
     return primeList;
-}
-
-int main(int argc, char *argv[]) {
-    unsigned long long int rank = 0;
-
-    unsigned char useJson = 0;
-
-    for (register unsigned short int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--rank") == 0 || strcmp(argv[i], "-r") == 0) {
-            if (i + 1 < argc) {
-                rank = atoi(argv[++i]);
-
-                if (rank < 3) {
-                    printf(HELP_MESSAGE);
-                    exit(EXIT_FAILURE);
-                }
-            } else {
-                printf(HELP_MESSAGE);
-                exit(EXIT_FAILURE);
-            }
-        } else if (strcmp(argv[i], "-js") == 0 || strcmp(argv[i], "--json") == 0) {
-            useJson = 1;
-        } else {
-            printf(HELP_MESSAGE);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    if (useJson) {
-        printf("[");
-    }
-
-    primeNumbers(rank, 1, useJson);
-
-    if (useJson) {
-        printf("]\n");
-    }
-    exit(EXIT_SUCCESS);
 }

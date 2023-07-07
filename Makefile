@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=
 LDFLAGS=-lpthread -lm -lgmp
-EXEC=primeNumbers clean test
+EXEC=cleanBefore primeNumbers cleanAfter test
 SRC=$(shell find ./src -type f -name *.c)
 OBJ=$(SRC:.c=.o)
 
@@ -15,7 +15,11 @@ primeNumbers: $(OBJ)
 
 .PHONY: clean test
 
-clean:
+cleanBefore:
+	rm -f ./primeNumbers
+	rm -rf ./src/*.o
+
+cleanAfter:
 	rm -rf ./src/*.o
 
 test:

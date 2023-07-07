@@ -4,7 +4,7 @@ EXPECTED_RESULT_100=`cat ./test/primeNumbers-100.json`
 EXPECTED_RESULT_1000=`cat ./test/primeNumbers-1000.json`
 
 # r=100
-RESULT=`./primeNumbers -r 100 -js`
+RESULT=`./primeNumbers -r 100 -j`
 if [ $? -eq 0 ]
 then
     echo "Execution (r=100) 0K"

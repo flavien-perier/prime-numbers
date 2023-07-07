@@ -24,5 +24,5 @@ make
 
 ## Params
 
-- -r (number)     --rank (number)         Get the max rank of the suite.
-- -js             --json                  Use json format.
+- -r (NUMBER)     --rank (NUMBER)         Get the max rank of the suite.
+- -j              --json                  Use json format.
