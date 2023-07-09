@@ -8,9 +8,10 @@
 #include <string.h>
 #include <gmp.h>
 
-#include "context.h"
 #include "write.h"
 
 mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned char useJson);
+
+void stopPrimeNumbers();
 
 #endif

@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <argp.h>
 #include <string.h>
+#include <signal.h>
 
-#include "context.h"
 #include "write.h"
 #include "primeNumbers.h"
 
@@ -53,6 +53,10 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 
 static struct argp argp = { options, parse_opt, args_doc, doc };
 
+void signalHandler(int signal) {
+    stopPrimeNumbers();
+}
+
 int main(int argc, char *argv[]) {
     struct arguments arguments;
     arguments.rank = 0;
@@ -60,6 +64,9 @@ int main(int argc, char *argv[]) {
     arguments.output = "";
 
     argp_parse(&argp, argc, argv, ARGP_NO_HELP, 0, &arguments);
+
+    signal(SIGINT, signalHandler);
+    signal(SIGQUIT, signalHandler);
 
     if (strcmp(arguments.output, "") != 0) {
         openOutputFile(&PRIME_NUMBER_OUTPUT_FILE, arguments.output);

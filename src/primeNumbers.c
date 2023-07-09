@@ -1,5 +1,7 @@
 #include "primeNumbers.h"
 
+unsigned char PROCESS_PRIME_NUMBERS_FINISH = 0;
+
 typedef struct {
     // Thread
     pthread_t thread;
@@ -60,7 +62,7 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
     register unsigned int threadIterator, threadIterator2;
 
     mpz_t* primeList = (mpz_t*) malloc(sizeof(mpz_t) * (rank == 0 ? 1000 : rank));
-    unsigned char processFinish = 0;
+    PROCESS_PRIME_NUMBERS_FINISH = 0;
 
     // Create workers thread pool.
     Worker** workers = (Worker**) malloc(sizeof(Worker) * nbrMaxThread);
@@ -94,7 +96,7 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
 
     register unsigned long long int iterator = 2;
 
-    while ((iterator < rank || rank == 0) && !processFinish) {
+    while ((iterator < rank || rank == 0) && !PROCESS_PRIME_NUMBERS_FINISH) {
         // Send jobs to thread pool
         for (threadIterator = 0; threadIterator < nbrThreads; threadIterator++) {
             mpz_add_ui(workers[threadIterator]->testedNumber, actualNumber, threadIterator * 2);
@@ -128,7 +130,7 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
                     if (iterator + 1 != rank || rank == 0) {
                         write(useJson ? "," : "\n");
                     } else {
-                        processFinish = 1;
+                        PROCESS_PRIME_NUMBERS_FINISH = 1;
                         break;
                     }
                 }
@@ -154,4 +156,8 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
     free(workers);
 
     return primeList;
+}
+
+void stopPrimeNumbers() {
+    PROCESS_PRIME_NUMBERS_FINISH = 1;
 }
