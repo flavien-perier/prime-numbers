@@ -15,7 +15,7 @@ static char args_doc[] = "";
 
 static struct argp_option options[] = {
         {"help",   'h', 0,        0, "Show this message.", -1},
-        {"rank",   'r', "NUMBER", 0, "Compare words instead of characters."},
+        {"rank",   'r', "NUMBER", 0, "Give the prime numbers up to rank."},
         {"json",   'j', 0,        0, "Use json format."},
         {"output", 'o', "FILE",   0, "Output file."},
         {0}
