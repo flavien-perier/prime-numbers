@@ -10,7 +10,7 @@
 
 #include "write.h"
 
-mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned char useJson);
+mpz_t *primeNumbers(unsigned long long int rank, unsigned char print, unsigned char useJson);
 
 void stopPrimeNumbers();
 

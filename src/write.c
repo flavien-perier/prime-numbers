@@ -1,8 +1,8 @@
 #include "write.h"
 
-void openOutputFile(FILE** file, char* fileName) {
-    struct stat   buffer;
-    if(stat(fileName, &buffer) == 0) {
+void openOutputFile(FILE **file, char *fileName) {
+    struct stat buffer;
+    if (stat(fileName, &buffer) == 0) {
         perror("File already exists.");
         exit(1);
     }
@@ -16,7 +16,7 @@ void closeOutputFile() {
     }
 }
 
-void write(char* str) {
+void write(char *str) {
     if (PRIME_NUMBER_OUTPUT_FILE == NULL) {
         printf("%s", str);
     } else {

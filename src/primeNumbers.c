@@ -10,7 +10,7 @@ typedef struct {
     pthread_mutex_t primeListMutex;
 
     // Context
-    mpz_t* primeList;
+    mpz_t *primeList;
     unsigned char work;
 
     // Task
@@ -19,8 +19,8 @@ typedef struct {
     unsigned char isPrime;
 } Worker;
 
-void* primeTesterWorker(void *args) {
-    Worker *worker = (Worker*)args;
+void *primeTesterWorker(void *args) {
+    Worker *worker = (Worker *) args;
 
     register unsigned long long int explorerIterator;
 
@@ -56,18 +56,18 @@ void* primeTesterWorker(void *args) {
     }
 }
 
-mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned char useJson) {
+mpz_t *primeNumbers(unsigned long long int rank, unsigned char print, unsigned char useJson) {
     const unsigned int nbrMaxThread = get_nprocs_conf() * 2;
     unsigned int nbrThreads = 1;
     register unsigned int threadIterator, threadIterator2;
 
-    mpz_t* primeList = (mpz_t*) malloc(sizeof(mpz_t) * (rank == 0 ? 1000 : rank));
+    mpz_t *primeList = (mpz_t *) malloc(sizeof(mpz_t) * (rank == 0 ? 1000 : rank));
     PROCESS_PRIME_NUMBERS_FINISH = 0;
 
     // Create workers thread pool.
-    Worker** workers = (Worker**) malloc(sizeof(Worker) * nbrMaxThread);
+    Worker **workers = (Worker **) malloc(sizeof(Worker) * nbrMaxThread);
     for (threadIterator = 0; threadIterator < nbrMaxThread; threadIterator++) {
-        workers[threadIterator] = (Worker*)malloc(sizeof(Worker));
+        workers[threadIterator] = (Worker *) malloc(sizeof(Worker));
 
         sem_init(&workers[threadIterator]->workSem, 0, 0);
         sem_init(&workers[threadIterator]->resultSem, 0, 0);
@@ -127,7 +127,7 @@ mpz_t* primeNumbers(unsigned long long int rank, unsigned char print, unsigned c
 
                 if (print) {
                     write(mpz_get_str(NULL, 10, primeList[iterator]));
-                    if (iterator + 1 != rank || rank == 0) {
+                    if ((iterator + 1 != rank || rank == 0) && !PROCESS_PRIME_NUMBERS_FINISH) {
                         write(useJson ? "," : "\n");
                     } else {
                         PROCESS_PRIME_NUMBERS_FINISH = 1;
