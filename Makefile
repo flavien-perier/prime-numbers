@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=
-LDFLAGS=-lpthread -lm -lgmp
+LDFLAGS=-lpthread -lm $(shell pkg-config --cflags --libs gmp)
 EXEC=cleanBefore primeNumbers cleanAfter test
 SRC=$(shell find ./src -type f -name *.c)
 OBJ=$(SRC:.c=.o)
@@ -8,10 +8,10 @@ OBJ=$(SRC:.c=.o)
 all: $(EXEC)
 
 primeNumbers: $(OBJ)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) -o $@ -c $< $(CFLAGS)
 
 .PHONY: clean test
 
