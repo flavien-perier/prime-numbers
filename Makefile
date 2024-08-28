@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=
+CFLAGS=-Wall -std=c99
 LDFLAGS=-lpthread -lm $(shell pkg-config --cflags --libs gmp)
 EXEC=cleanBefore primeNumbers cleanAfter test
 SRC=$(shell find ./src -type f -name *.c)
