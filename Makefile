@@ -1,11 +1,12 @@
 CC=gcc
 CFLAGS=-Wall -std=c99
 LDFLAGS=-lpthread -lm $(shell pkg-config --cflags --libs gmp)
-EXEC=cleanBefore primeNumbers cleanAfter test
 SRC=$(shell find ./src -type f -name *.c)
 OBJ=$(SRC:.c=.o)
 
-all: $(EXEC)
+all: cleanBefore primeNumbers cleanAfter test
+cleanAfter: primeNumbers
+test: cleanAfter
 
 primeNumbers: $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -13,14 +14,14 @@ primeNumbers: $(OBJ)
 %.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-.PHONY: clean test
+.PHONY: cleanBefore cleanAfter test
 
 cleanBefore:
 	rm -f ./primeNumbers
-	rm -rf ./src/*.o
+	find . -name "*.o" -delete
 
 cleanAfter:
-	rm -rf ./src/*.o
+	find . -name "*.o" -delete
 
 test:
 	./test/test.sh
