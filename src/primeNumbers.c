@@ -54,6 +54,8 @@ void *primeTesterWorker(void *args) {
 
         sem_post(&worker->resultSem);
     }
+
+    return NULL;
 }
 
 mpz_t *primeNumbers(unsigned long long int rank, unsigned char print, unsigned char useJson) {

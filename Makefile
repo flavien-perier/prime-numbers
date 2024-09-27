@@ -1,6 +1,7 @@
 CC=gcc
-CFLAGS=-Wall -std=c99
-LDFLAGS=-lpthread -lm $(shell pkg-config --cflags --libs gmp)
+LIBS=gmp
+CFLAGS=-Wall -std=c99 $(shell pkg-config --cflags ${LIBS})
+LDFLAGS=-lpthread -lm $(shell pkg-config --libs ${LIBS})
 SRC=$(shell find ./src -type f -name *.c)
 OBJ=$(SRC:.c=.o)
 
