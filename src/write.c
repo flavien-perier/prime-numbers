@@ -25,10 +25,16 @@ void closeOutputFile(void) {
     }
 }
 
-void writeOutput(const char *str) {
+void writeOutput(const char *const str) {
     if (PRIME_NUMBER_OUTPUT_FILE == NULL) {
-        printf("%s", str);
+        if (printf("%s", str) < 0) {
+            perror("printf");
+            exit(EXIT_FAILURE);
+        }
     } else {
-        fprintf(PRIME_NUMBER_OUTPUT_FILE, "%s", str);
+        if (fprintf(PRIME_NUMBER_OUTPUT_FILE, "%s", str) < 0) {
+            perror("fprintf");
+            exit(EXIT_FAILURE);
+        }
     }
 }

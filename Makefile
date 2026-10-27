@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=-O2 -Wall -Wextra -std=c99
-LDFLAGS=-lpthread -lm -lgmp
+CFLAGS=-O3 -march=native -flto -Wall -Wextra -std=c11
+LDFLAGS=-lpthread -lm -lgmp -flto
 SRC=$(wildcard src/*.c)
 OBJ=$(SRC:.c=.o)
 

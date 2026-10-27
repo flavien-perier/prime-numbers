@@ -9,7 +9,7 @@
 #include "write.h"
 #include "primeNumbers.h"
 
-const char *argp_program_version = "Prime Numbers 1.0.0";
+const char *argp_program_version = "Prime Numbers 2.0.0";
 const char *argp_program_bug_address = "<perier@flavien.io>";
 static char doc[] = "Multithreaded prime number calculator.";
 static char args_doc[] = "";
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     }
 
     unsigned long long int count = 0;
-    mpz_t *primes = primeNumbers(arguments.rank, true, arguments.json, &count);
+    mpz_t *primes = primeNumbers(arguments.rank, true, arguments.json, false, &count);
 
     if (arguments.json) {
         writeOutput("]\n");

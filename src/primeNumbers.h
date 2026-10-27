@@ -10,7 +10,7 @@
 
 #include "write.h"
 
-mpz_t *primeNumbers(unsigned long long int rank, bool print, bool useJson, unsigned long long int *count);
+mpz_t *primeNumbers(unsigned long long int rank, bool print, bool useJson, bool store, unsigned long long int *count);
 
 void freePrimeNumbers(mpz_t *primeList, unsigned long long int count);
 
