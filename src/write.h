@@ -3,15 +3,12 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <sys/stat.h>
 
 extern FILE *PRIME_NUMBER_OUTPUT_FILE;
 
-void openOutputFile(FILE **file, char *fileName);
-
-void closeOutputFile();
-
-void write(char *str);
+void openOutputFile(FILE **file, const char *fileName);
+void closeOutputFile(void);
+void writeOutput(const char *str);
 
 #endif

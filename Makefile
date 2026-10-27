@@ -1,13 +1,10 @@
 CC=gcc
-LIBS=gmp
-CFLAGS=-Wall -std=c99 $(shell pkg-config --cflags ${LIBS})
-LDFLAGS=-lpthread -lm $(shell pkg-config --libs ${LIBS})
-SRC=$(shell find ./src -type f -name *.c)
+CFLAGS=-Wall -Wextra -std=c99
+LDFLAGS=-lpthread -lm -lgmp
+SRC=$(wildcard src/*.c)
 OBJ=$(SRC:.c=.o)
 
-all: cleanBefore primeNumbers cleanAfter test
-cleanAfter: primeNumbers
-test: cleanAfter
+all: test
 
 primeNumbers: $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -15,14 +12,16 @@ primeNumbers: $(OBJ)
 %.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-.PHONY: cleanBefore cleanAfter test
-
-cleanBefore:
-	rm -f ./primeNumbers
-	find . -name "*.o" -delete
-
-cleanAfter:
-	find . -name "*.o" -delete
-
-test:
+test: primeNumbers
 	./test/test.sh
+
+analyze:
+	@for src in $(SRC); do \
+		echo "analyze $$src"; \
+		$(CC) -fanalyzer $(CFLAGS) -c $$src -o /dev/null || exit 1; \
+	done
+
+clean:
+	rm -f primeNumbers $(OBJ)
+
+.PHONY: all test analyze clean

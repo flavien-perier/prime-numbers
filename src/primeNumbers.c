@@ -1,28 +1,43 @@
+#define _GNU_SOURCE
 #include "primeNumbers.h"
 
-unsigned char PROCESS_PRIME_NUMBERS_FINISH = 0;
+#include <errno.h>
+#include <signal.h>
+#include <string.h>
+
+static volatile sig_atomic_t PROCESS_PRIME_NUMBERS_FINISH = 0;
 
 typedef struct {
-    // Thread
     pthread_t thread;
     sem_t workSem;
     sem_t resultSem;
-    pthread_mutex_t primeListMutex;
 
-    // Context
     mpz_t *primeList;
-    unsigned char work;
+    volatile bool work;
 
-    // Task
     unsigned long long int iterator;
     mpz_t testedNumber;
-    unsigned char isPrime;
+    bool isPrime;
 } Worker;
 
-void *primeTesterWorker(void *args) {
+static void writePrime(const mpz_t prime) {
+    char *str = mpz_get_str(NULL, 10, prime);
+    writeOutput(str);
+    free(str);
+}
+
+static void writeSeparator(const bool useJson) {
+    writeOutput(useJson ? "," : "\n");
+}
+
+static void *primeTesterWorker(void *args) {
     Worker *worker = (Worker *) args;
 
-    register unsigned long long int explorerIterator;
+    sigset_t blockedSignals;
+    sigemptyset(&blockedSignals);
+    sigaddset(&blockedSignals, SIGINT);
+    sigaddset(&blockedSignals, SIGQUIT);
+    pthread_sigmask(SIG_BLOCK, &blockedSignals, NULL);
 
     mpz_t modulo;
     mpz_init(modulo);
@@ -30,24 +45,23 @@ void *primeTesterWorker(void *args) {
     mpz_t sqrtTestedNumber;
     mpz_init(sqrtTestedNumber);
 
-    while (worker->work) {
+    while (true) {
         sem_wait(&worker->workSem);
-        worker->isPrime = 1;
+        if (!worker->work) {
+            break;
+        }
 
+        worker->isPrime = true;
         mpz_sqrt(sqrtTestedNumber, worker->testedNumber);
 
-        for (explorerIterator = 1; explorerIterator <= worker->iterator / 2; explorerIterator++) {
-            pthread_mutex_lock(&worker->primeListMutex);
-            mpz_mod(modulo, worker->testedNumber, worker->primeList[explorerIterator]);
-
+        for (unsigned long long int explorerIterator = 1; explorerIterator <= worker->iterator / 2; explorerIterator++) {
             if (mpz_cmp(worker->primeList[explorerIterator], sqrtTestedNumber) > 0) {
-                pthread_mutex_unlock(&worker->primeListMutex);
                 break;
             }
-            pthread_mutex_unlock(&worker->primeListMutex);
 
+            mpz_mod(modulo, worker->testedNumber, worker->primeList[explorerIterator]);
             if (mpz_cmp_ui(modulo, 0) == 0) {
-                worker->isPrime = 0;
+                worker->isPrime = false;
                 break;
             }
         }
@@ -55,111 +69,159 @@ void *primeTesterWorker(void *args) {
         sem_post(&worker->resultSem);
     }
 
+    mpz_clear(modulo);
+    mpz_clear(sqrtTestedNumber);
     return NULL;
 }
 
-mpz_t *primeNumbers(unsigned long long int rank, unsigned char print, unsigned char useJson) {
-    const unsigned int nbrMaxThread = get_nprocs_conf() * 2;
+static Worker *createWorker(mpz_t *primeList) {
+    Worker *worker = (Worker *) malloc(sizeof(Worker));
+    if (worker == NULL) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+
+    worker->primeList = primeList;
+    worker->work = true;
+    worker->iterator = 0;
+    worker->isPrime = false;
+
+    if (sem_init(&worker->workSem, 0, 0) == -1 || sem_init(&worker->resultSem, 0, 0) == -1) {
+        perror("sem_init");
+        exit(EXIT_FAILURE);
+    }
+
+    mpz_init(worker->testedNumber);
+
+    const int error = pthread_create(&worker->thread, NULL, primeTesterWorker, worker);
+    if (error != 0) {
+        fprintf(stderr, "pthread_create: %s\n", strerror(error));
+        exit(EXIT_FAILURE);
+    }
+
+    return worker;
+}
+
+mpz_t *primeNumbers(const unsigned long long int rank, const bool print, const bool useJson, unsigned long long int *count) {
+    const int configuredProcessors = get_nprocs_conf();
+    const unsigned int nbrMaxThread = (configuredProcessors > 0) ? (unsigned int) configuredProcessors * 2 : 2;
     unsigned int nbrThreads = 1;
-    register unsigned int threadIterator, threadIterator2;
+    unsigned long long int iterator = (rank == 1) ? 1 : 2;
+    unsigned long long int capacity = (rank == 0) ? 1000 : rank;
 
-    mpz_t *primeList = (mpz_t *) malloc(sizeof(mpz_t) * (rank == 0 ? 1000 : rank));
-    PROCESS_PRIME_NUMBERS_FINISH = 0;
+    mpz_t *primeList = (mpz_t *) malloc(sizeof(mpz_t) * capacity);
+    if (primeList == NULL) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
 
-    // Create workers thread pool.
-    Worker **workers = (Worker **) malloc(sizeof(Worker) * nbrMaxThread);
-    for (threadIterator = 0; threadIterator < nbrMaxThread; threadIterator++) {
-        workers[threadIterator] = (Worker *) malloc(sizeof(Worker));
-
-        sem_init(&workers[threadIterator]->workSem, 0, 0);
-        sem_init(&workers[threadIterator]->resultSem, 0, 0);
-        pthread_mutex_init(&workers[threadIterator]->primeListMutex, NULL);
-        mpz_init(workers[threadIterator]->testedNumber);
-        workers[threadIterator]->primeList = primeList;
-        workers[threadIterator]->work = 1;
-        pthread_create(&workers[threadIterator]->thread, NULL, primeTesterWorker, workers[threadIterator]);
+    Worker **workers = (Worker **) malloc(sizeof(Worker *) * nbrMaxThread);
+    if (workers == NULL) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    for (unsigned int threadIterator = 0; threadIterator < nbrMaxThread; threadIterator++) {
+        workers[threadIterator] = createWorker(primeList);
     }
 
     mpz_init_set_ui(primeList[0], 2);
-    mpz_init_set_ui(primeList[1], 3);
+    if (rank != 1) {
+        mpz_init_set_ui(primeList[1], 3);
+    }
 
     mpz_t actualNumber;
     mpz_init_set_ui(actualNumber, 5);
 
-    mpz_t modulo;
-    mpz_init(modulo);
-
     if (print) {
-        write(mpz_get_str(NULL, 10, primeList[0]));
-        write(useJson ? "," : "\n");
-        write(mpz_get_str(NULL, 10, primeList[1]));
-        write(useJson ? "," : "\n");
+        writePrime(primeList[0]);
+        if (rank != 1) {
+            writeSeparator(useJson);
+            writePrime(primeList[1]);
+        }
     }
 
-    register unsigned long long int iterator = 2;
-
-    while ((iterator < rank || rank == 0) && !PROCESS_PRIME_NUMBERS_FINISH) {
-        // Send jobs to thread pool
-        for (threadIterator = 0; threadIterator < nbrThreads; threadIterator++) {
-            mpz_add_ui(workers[threadIterator]->testedNumber, actualNumber, threadIterator * 2);
-            workers[threadIterator]->iterator = iterator;
-
-            sem_post(&workers[threadIterator]->workSem);
+    while ((rank == 0 || iterator < rank) && !PROCESS_PRIME_NUMBERS_FINISH) {
+        if (rank == 0 && capacity < iterator + nbrThreads) {
+            capacity = iterator + nbrThreads + 1000;
+            mpz_t *newPrimeList = (mpz_t *) realloc(primeList, sizeof(mpz_t) * capacity);
+            if (newPrimeList == NULL) {
+                perror("realloc");
+                exit(EXIT_FAILURE);
+            }
+            primeList = newPrimeList;
+            for (unsigned int threadIterator = 0; threadIterator < nbrMaxThread; threadIterator++) {
+                workers[threadIterator]->primeList = primeList;
+            }
         }
 
-        // Get results in thread pool
-        for (threadIterator = 0; threadIterator < nbrThreads; threadIterator++) {
-            sem_wait(&workers[threadIterator]->resultSem);
+        for (unsigned int threadIterator = 0; threadIterator < nbrThreads; threadIterator++) {
+            Worker *worker = workers[threadIterator];
+            mpz_add_ui(worker->testedNumber, actualNumber, threadIterator * 2);
+            worker->iterator = iterator;
+            sem_post(&worker->workSem);
+        }
 
-            if (workers[threadIterator]->isPrime) {
-                if (rank == 0 && iterator % 1000 == 0) {
-                    for (threadIterator2 = 0; threadIterator2 < nbrThreads; threadIterator2++) {
-                        pthread_mutex_lock(&workers[threadIterator2]->primeListMutex);
-                    }
+        for (unsigned int threadIterator = 0; threadIterator < nbrThreads; threadIterator++) {
+            Worker *worker = workers[threadIterator];
+            int waitResult;
+            do {
+                waitResult = sem_wait(&worker->resultSem);
+            } while (waitResult == -1 && errno == EINTR && !PROCESS_PRIME_NUMBERS_FINISH);
 
-                    primeList = realloc(primeList, sizeof(mpz_t) * (iterator + 1000));
+            if (waitResult == -1) {
+                goto cleanup;
+            }
 
-                    for (threadIterator2 = 0; threadIterator2 < nbrThreads; threadIterator2++) {
-                        workers[threadIterator2]->primeList = primeList;
-                        pthread_mutex_unlock(&workers[threadIterator2]->primeListMutex);
-                    }
-                }
-
-                mpz_init_set(primeList[iterator], workers[threadIterator]->testedNumber);
-
+            if (worker->isPrime) {
+                mpz_init_set(primeList[iterator], worker->testedNumber);
                 if (print) {
-                    write(mpz_get_str(NULL, 10, primeList[iterator]));
-                    if ((iterator + 1 != rank || rank == 0) && !PROCESS_PRIME_NUMBERS_FINISH) {
-                        write(useJson ? "," : "\n");
-                    } else {
-                        PROCESS_PRIME_NUMBERS_FINISH = 1;
-                        break;
-                    }
+                    writeSeparator(useJson);
+                    writePrime(primeList[iterator]);
                 }
-
                 iterator++;
+                if (rank != 0 && iterator >= rank) {
+                    break;
+                }
             }
         }
 
         mpz_add_ui(actualNumber, actualNumber, 2 * nbrThreads);
 
         if (nbrThreads < iterator && nbrThreads < nbrMaxThread) {
-            nbrThreads += 1;
+            nbrThreads++;
         }
     }
 
-    for (register unsigned int i = 0; i < nbrMaxThread; i++) {
-        workers[i]->work = 0;
-        sem_destroy(&workers[i]->workSem);
-        sem_destroy(&workers[i]->resultSem);
-        pthread_mutex_destroy(&workers[i]->primeListMutex);
-        free(workers[i]);
+cleanup:
+    for (unsigned int threadIterator = 0; threadIterator < nbrMaxThread; threadIterator++) {
+        workers[threadIterator]->work = false;
+        sem_post(&workers[threadIterator]->workSem);
+    }
+    for (unsigned int threadIterator = 0; threadIterator < nbrMaxThread; threadIterator++) {
+        Worker *worker = workers[threadIterator];
+        pthread_join(worker->thread, NULL);
+        sem_destroy(&worker->workSem);
+        sem_destroy(&worker->resultSem);
+        mpz_clear(worker->testedNumber);
+        free(worker);
     }
     free(workers);
+    mpz_clear(actualNumber);
 
+    *count = iterator;
     return primeList;
 }
 
-void stopPrimeNumbers() {
+void freePrimeNumbers(mpz_t *primeList, const unsigned long long int count) {
+    if (primeList == NULL) {
+        return;
+    }
+    for (unsigned long long int index = 0; index < count; index++) {
+        mpz_clear(primeList[index]);
+    }
+    free(primeList);
+}
+
+void stopPrimeNumbers(void) {
     PROCESS_PRIME_NUMBERS_FINISH = 1;
 }
